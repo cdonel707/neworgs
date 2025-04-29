@@ -4,6 +4,7 @@ import time
 from dotenv import load_dotenv
 import json
 from datetime import datetime
+import threading
 
 # Load environment variables
 load_dotenv()
@@ -158,5 +159,20 @@ def poll_organizations():
             print("Retrying in 5 minutes...")
             time.sleep(5 * 60)  # 5 minutes in seconds
 
+# Create a Flask app for gunicorn
+from flask import Flask
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return "Auth0 Organization Monitor is running"
+
+# Start the polling in a separate thread
+def start_polling():
+    poll_organizations()
+
+# Start the polling thread when the app is ready
+threading.Thread(target=start_polling, daemon=True).start()
+
 if __name__ == "__main__":
-    poll_organizations() 
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000))) 

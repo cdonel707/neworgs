@@ -1,1 +1,1 @@
-worker: python get_organizations.py 
+worker: gunicorn get_organizations:app 
