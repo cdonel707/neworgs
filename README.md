@@ -4,7 +4,7 @@ A Python script that monitors Auth0 organizations and sends notifications to Sla
 
 ## Features
 
-- Monitors Auth0 organizations every minute
+- Monitors AuthBan organizations every minute
 - Detects newly created organizations
 - Enriches organization data with member information
 - Sends notifications to Slack
@@ -49,8 +49,20 @@ The script will:
 - Display information in the console
 - Can be stopped with Ctrl+C
 
+## Railway Deployment
+
+1. Create a new project on [Railway.app](https://railway.app)
+2. Connect your GitHub repository
+3. Add the following environment variables in Railway:
+   - `AUTH0_DOMAIN`
+   - `AUTH0_API_TOKEN`
+   - `SLACK_WEBHOOK_URL`
+4. Deploy the project
+
+The application will run as a worker process on Railway, continuously monitoring for new organizations.
+
 ## Requirements
 
-- Python 3.6+
+- Python 3.11+
 - requests
 - python-dotenv 
