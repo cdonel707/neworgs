@@ -62,17 +62,54 @@ def get_organizations():
     response.raise_for_status()
     return response.json()
 
-def get_organization_members(org_id):
-    """Get members of a specific organization"""
-    url = f"https://{AUTH0_DOMAIN}/api/v2/organizations/{org_id}/members"
+def get_github_user_info(github_id):
+    """Get GitHub user information from GitHub API."""
+    try:
+        response = requests.get(f"https://api.github.com/user/{github_id}")
+        if response.status_code == 200:
+            return response.json()
+        return None
+    except Exception as e:
+        print(f"Error fetching GitHub user info: {e}")
+        return None
+
+def get_organization_members(org_id, token):
+    """Get members of an organization."""
+    url = f"{AUTH0_DOMAIN}/api/v2/organizations/{org_id}/members"
     headers = {
-        "Authorization": f"Bearer {API_TOKEN}",
+        "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
     }
     
-    response = requests.get(url, headers=headers)
-    response.raise_for_status()
-    return response.json()
+    try:
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            members = response.json()
+            member_details = []
+            
+            for member in members:
+                # Extract GitHub ID from user_id (format: "github|123456")
+                user_id = member.get('user_id', '')
+                github_id = user_id.split('|')[-1] if 'github' in user_id else None
+                
+                # Get GitHub user info if we have a GitHub ID
+                github_info = None
+                if github_id:
+                    github_info = get_github_user_info(github_id)
+                
+                member_details.append({
+                    'name': member.get('name', 'Unknown'),
+                    'email': member.get('email', 'No email'),
+                    'github_url': github_info.get('html_url') if github_info else None
+                })
+            
+            return member_details
+        else:
+            print(f"Error getting members: {response.status_code}")
+            return []
+    except Exception as e:
+        print(f"Error in get_organization_members: {e}")
+        return []
 
 def find_new_organizations(current_orgs, previous_orgs):
     """Find organizations that weren't in the previous list"""
@@ -92,7 +129,8 @@ def format_slack_message(org, members):
     
     if members:
         for member in members:
-            message.append(f"• {member.get('name', 'Unknown')} ({member.get('email', 'No email')})")
+            github_link = f" (<{member['github_url']}|GitHub>)" if member.get('github_url') else ""
+            message.append(f"• {member.get('name', 'Unknown')} ({member.get('email', 'No email')}){github_link}")
     else:
         message.append("No members found")
     
@@ -108,7 +146,7 @@ def print_organization_details(org):
     
     # Get and print member information
     try:
-        members = get_organization_members(org['id'])
+        members = get_organization_members(org['id'], API_TOKEN)
         print("\nMembers:")
         if members:
             for member in members:
