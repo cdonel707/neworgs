@@ -75,7 +75,7 @@ def get_github_user_info(github_id):
 
 def get_organization_members(org_id, token):
     """Get members of an organization."""
-    url = f"{AUTH0_DOMAIN}/api/v2/organizations/{org_id}/members"
+    url = f"https://{AUTH0_DOMAIN}/api/v2/organizations/{org_id}/members"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
