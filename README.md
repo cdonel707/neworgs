@@ -14,7 +14,7 @@ A Python script that monitors Auth0 organizations and sends notifications to Sla
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/cdonel707/neworgs.git
+git clone https://github.com/fern-api/neworgs.git
 cd neworgs
 ```
 
