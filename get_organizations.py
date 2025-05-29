@@ -11,13 +11,46 @@ load_dotenv()
 
 # Auth0 Management API configuration
 AUTH0_DOMAIN = os.getenv('AUTH0_DOMAIN')
-API_TOKEN = os.getenv('AUTH0_API_TOKEN')
+AUTH0_CLIENT_ID = os.getenv('AUTH0_CLIENT_ID')
+AUTH0_CLIENT_SECRET = os.getenv('AUTH0_CLIENT_SECRET')
+
+
 
 # Slack configuration
 SLACK_WEBHOOK_URL = os.getenv('SLACK_WEBHOOK_URL')
 
 # File to store previously seen organizations
 PREVIOUS_ORGS_FILE = 'previous_orgs.json'
+
+# Global variable to cache the token
+cached_token = None
+token_expiry = None
+
+def get_auth0_token():
+    """Get a fresh Auth0 Management API token using client credentials"""
+    global cached_token, token_expiry
+    
+    # If we have a cached token that's still valid, use it
+    if cached_token and token_expiry and datetime.now().timestamp() < token_expiry:
+        return cached_token
+        
+    try:
+        response = requests.post(f'https://{AUTH0_DOMAIN}/oauth/token', {
+            'client_id': AUTH0_CLIENT_ID,
+            'client_secret': AUTH0_CLIENT_SECRET,
+            'audience': f'https://{AUTH0_DOMAIN}/api/v2/',
+            'grant_type': 'client_credentials'
+        })
+        response.raise_for_status()
+        
+        token_data = response.json()
+        cached_token = token_data['access_token']
+        token_expiry = datetime.now().timestamp() + (token_data.get('expires_in', 3600) * 0.9)
+        
+        return cached_token
+    except Exception as e:
+        print(f"Error getting Auth0 token: {e}")
+
 
 def send_slack_message(message):
     """Send a message to Slack"""
@@ -51,7 +84,7 @@ def get_organizations():
     """Get organizations with sorting by created_at in descending order"""
     url = f"https://{AUTH0_DOMAIN}/api/v2/organizations"
     headers = {
-        "Authorization": f"Bearer {API_TOKEN}",
+        "Authorization": f"Bearer {get_auth0_token()}",
         "Content-Type": "application/json"
     }
     params = {
@@ -146,7 +179,7 @@ def print_organization_details(org):
     
     # Get and print member information
     try:
-        members = get_organization_members(org['id'], API_TOKEN)
+        members = get_organization_members(org['id'], get_auth0_token())
         print("\nMembers:")
         if members:
             for member in members:
@@ -213,4 +246,4 @@ def start_polling():
 threading.Thread(target=start_polling, daemon=True).start()
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000))) 
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8000))) 
